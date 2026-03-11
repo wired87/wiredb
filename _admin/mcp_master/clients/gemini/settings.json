@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "mcpServers": {
+    "eq-storage": {
+      "command": "py",
+      "args": [
+        "-m",
+        "_admin.mcp_master.mcp_server"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "env": {
+        "MCP_HOST": "${MCP_HOST}",
+        "MCP_PORT": "${MCP_PORT}",
+        "MCP_PATH": "${MCP_PATH}"
+      },
+      "timeout": 60000,
+      "trust": false,
+      "description": "Primary eq_storage MCP server (streamable HTTP)."
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/modelcontextprotocol/servers/github:latest"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "timeout": 60000,
+      "trust": false,
+      "description": "Official GitHub MCP server via Docker image."
+    }
+  },
+  "mcp": {
+    "allowed": [
+      "eq-storage",
+      "github"
+    ],
+    "excluded": []
+  },
+  "context": {
+    "fileName": [
+      "GEMINI.md"
+    ],
+    "includeDirectories": [
+      "${PROJECT_ROOT}"
+    ]
+  }
+}

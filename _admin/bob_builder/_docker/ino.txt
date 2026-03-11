@@ -1,0 +1,73 @@
+# 1 build
+docker build -t us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs -f ./Dockerfile .
+
+# 2 create repo:
+gcloud artifacts repositories create qfs --repository-format=docker --location=us-central1
+
+# 3 push artifact regsitry
+docker tag us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs:latest us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs:backup_tag
+docker tag qfs us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs
+docker push us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs
+
+netstat
+netstat -ano
+ipconfig /all
+
+artifact registry build & push
+docker build -t cor:latest C:\\Users\\bestb\\Desktop\\qfs && \
+docker push us-central1-docker.pkg.dev/aixr-401704/qfs-repo/cor:latest
+
+gcloud artifacts repositories create qfn \
+   --repository-format=docker \
+   --location=us-central1 \
+   --description="QMVP"
+
+gcloud artifacts repositories add-iam-policy-binding qfn \
+    --location=us-central1 \
+    --member=serviceAccount:aixr-401704@appspot.gserviceaccount.com \
+    --role="roles/artifactregistry.reader"
+
+### LIST IMGs registry
+gcloud artifacts docker images list \
+  us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs
+
+# DLETE ARTIFACT IMAGE
+gcloud artifacts docker images delete us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs@sha256:d689be8997dc93202ed089502b4d9eff371eed3ededef0fdfc412579b4209230
+
+
+# DESCRIBE POD EG ERROR
+kubectl describe pod env-rajtigesomnlhfyqzbvx-dxuaodaunybixgexyufp-54c448db94-k982t -n default
+
+
+docker run us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs:latest
+docker run \
+  -e USER_ID="rajtigesomnlhfyqzbvx" \
+  -e ENV_ID="env_bare_rajtigesomnlhfyqzbvx" \
+  -e DATASET_ID="QCOMPS" \
+  -e SIM_CLUSTER_NAME="autopilot-cluster-1" \
+  -e DELETE_POD_ENDPOINT="gke/delete-pod/" \
+  -e FIELD_TYPE="ELECTRON" \
+  -e RELAY_ID="TEST123" \
+  -e FIREBASE_CREDENTIALS="./firebase_credentials.json" \
+  -e FIREBASE_RTDB="https://bestbrain-39ce7-default-rtdb.firebaseio.com/" \
+  -e DOMAIN="bestbrain.tech" \
+  -e GCP_ID="aixr-401704" \
+  -e STIM_ROUNDS="1" \
+  -e LOGGING_DIR="tmp/ray" \
+  -e SESSION_ID="env_bare_rajtigesomnlhfyqzbvx" \
+  -e STIM_STRENGTH="2" \
+  us-central1-docker.pkg.dev/aixr-401704/qfs-repo/qfs:latest
+
+
+
+list running dockers
+docker ps
+
+lit all dockers
+docker ps -o
+
+
+
+list all registry repos
+gcloud artifacts repositories list --project=aixr-401704
+

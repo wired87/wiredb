@@ -1,0 +1,22 @@
+[Unit]
+Description=gunicorn daemon for bestbrain.tech
+After=network.target
+
+[Service]
+StandardOutput=journal
+StandardError=journal
+
+Environment="PATH=/home/derbenedikt_sterra/workenv/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+User=derbenedikt_sterra
+
+Group=www-data
+WorkingDirectory=/home/derbenedikt_sterra/BestBrain
+ExecStart=/home/derbenedikt_sterra/workenv/bin/uvicorn bm.asgi:application --workers 3 --threads 3 --bind 127.0.0.1:8001 --capture-output --log-level debug
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

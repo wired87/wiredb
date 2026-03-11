@@ -1,0 +1,31 @@
+
+cd dir/to/push
+
+git  init && \
+
+git remote add betse https://github.com/wired87/_betse && \
+
+git add utils && \
+
+git commit -m "Important stuff" && \
+
+git push -u betse master
+
+rm all adds
+git reset HEAD .
+
+check all remotes:
+
+git remote -v
+
+rm remote
+git remote remove uutils
+
+
+Error:
+Please commit your changes or stash them before you merge.
+Aborting
+Updating abb414e..5ec83eb
+
+solution:
+git reset --hard HEAD

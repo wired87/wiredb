@@ -1,0 +1,8 @@
+tmux new -s mysession
+
+python3 your_script.py
+
+quit while let run
+Ctrl + B, then D
+
+tmux attach -t mysession

@@ -1,0 +1,12 @@
+# enable specific ports on vm
+# 1. UFW installieren
+# 2. UFW aktivieren (falls noch nicht aktiv)
+# 3. Port 8000 freigeben
+# 4. Status prüfen
+
+sudo apt update
+sudo apt install ufw
+sudo ufw enable
+sudo ufw allow 8000/tcp
+sudo ufw reload
+sudo ufw status

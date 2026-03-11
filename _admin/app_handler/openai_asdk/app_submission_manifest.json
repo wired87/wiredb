@@ -1,0 +1,125 @@
+{
+  "submission_url": "https://platform.openai.com/apps-manage",
+  "app_name": "BestBrain",
+  "subtitle": "Physics simulation and scientific computing for lattice field theory",
+  "version": "0.1.0",
+  "description": "Physics simulation and scientific computing environment for lattice field theory, fermions, and gauge fields. Run and manage simulations, list saved environments, and create new physics simulations with configurable modules.",
+  "privacy_policy_url": "https://bestbrain.tech/privacy",
+  "terms_of_service_url": "https://bestbrain.tech/terms",
+  "support_contact": "support@bestbrain.tech",
+  "company_url": "https://bestbrain.tech",
+  "logo_url": "https://bestbrain.tech/logo.png",
+  "category": "Developer tools",
+  "mcp_connector_instructions": "Deploy the MCP server to a publicly accessible HTTPS URL (e.g. Cloud Run, Fly.io, or use ngrok for testing). Then in the submission form, set Connector URL to: https://<your-domain>/mcp",
+  "mcp_path": "/mcp",
+  "content_security_policy": {
+    "connectDomains": [
+      "https://api.openai.com",
+      "https://bestbrain.tech"
+    ],
+    "resourceDomains": [
+      "https://bestbrain.tech"
+    ],
+    "frameDomains": []
+  },
+  "tools": [
+    {
+      "name": "list_simulations",
+      "title": "List simulations",
+      "description": "Returns the user's saved simulations without modifying them.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "User identifier"
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "create_simulation",
+      "title": "Create simulation",
+      "description": "Creates a new physics simulation with the given parameters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "env_id": {
+            "type": "string"
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "env_id",
+          "modules"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "tool_count": 2,
+  "golden_prompts": {
+    "direct": [
+      "List my simulations",
+      "Show me my saved simulations",
+      "What simulations do I have?"
+    ],
+    "indirect": [
+      "I want to see what I've run before",
+      "Check my physics simulation history"
+    ],
+    "negative": [
+      "What's the weather today?",
+      "Send an email to john@example.com"
+    ]
+  },
+  "test_prompts_and_responses": [
+    {
+      "prompt": "List my simulations",
+      "expected_response_summary": "App calls list_simulations and returns a list of saved simulations (or empty list with count 0). No side effects."
+    },
+    {
+      "prompt": "Show me my saved simulations",
+      "expected_response_summary": "Same as above; list_simulations returns simulations without modifying anything."
+    },
+    {
+      "prompt": "Create a new simulation with env_id demo_env and modules FERMION",
+      "expected_response_summary": "App calls create_simulation with env_id and modules; returns confirmation of created simulation."
+    },
+    {
+      "prompt": "What's the weather today?",
+      "expected_response_summary": "App should NOT be triggered (negative test); ChatGPT answers without using BestBrain."
+    }
+  ],
+  "localization": {
+    "default_locale": "en",
+    "locales_supported": [
+      "en"
+    ]
+  },
+  "demo_video_path": "C:\\Users\\bestb\\PycharmProjects\\BestBrain\\my_demo.webm",
+  "demo_html_dir": "C:\\Users\\bestb\\PycharmProjects\\BestBrain\\qdash_demo_html",
+  "screenshots_note": "Upload screenshots of the app in use (required dimensions per dashboard).",
+  "checklist_before_submit": [
+    "Organization verification completed (Dashboard → Settings → General).",
+    "Owner role in organization.",
+    "MCP server deployed at public HTTPS URL (e.g. https://your-app.run.app/mcp).",
+    "CSP defined; no localhost in production.",
+    "Demo account (no MFA) if app requires auth."
+  ]
+}

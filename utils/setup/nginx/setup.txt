@@ -1,0 +1,128 @@
+########### nginx
+sudo apt update
+sudo apt install certbot nginx python3-certbot-nginx
+
+systemctl status nginx
+sudo systemctl start nginx
+
+EDIT FILE
+sudo nano /etc/nginx/sites-available/bestbrain.tech
+AND
+sudo nano /etc/nginx/nginx.conf
+
+->
+server {
+    server_name bestbrain.tech www.bestbrain.tech;
+
+    location / {
+        proxy_pass http://127.0.0.1:8001;  # your Django app
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_read_timeout 3000;
+        proxy_connect_timeout 3000;
+        proxy_send_timeout 3000;
+        send_timeout 3000;
+    }
+
+    location /static/ {
+        alias /home/derbenedikt_sterra/BestBrain/static_root/;
+    }
+
+    location /inv/ {
+        proxy_pass http://127.0.0.1:8001;  # FastAPI
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+
+    location /media/ {
+        alias /home/derbenedikt_sterra/BestBrain/media/;
+    }
+
+
+  server {
+
+    if ($host = www.bestbrain.tech) {
+      return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = bestbrain.tech) {
+      return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    server_name bestbrain.tech www.bestbrain.tech;
+
+    listen 80;
+
+    return 404; # managed by Certbot
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/bestbrain.tech/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/bestbrain.tech/privkey.pem; # managed by Certbot
+
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+
+
+
+#####
+
+
+-> save (strg X -> y)
+sudo ln -s /etc/nginx/sites-available/bestbrain.tech /etc/nginx/sites-enabled/
+
+
+test nginx
+sudo nginx -t && \
+sudo systemctl reload nginx && \
+sudo resolvectl flush-caches && \
+sudo systemctl restart systemd-networkd && \
+sudo certbot --nginx -d bestbrain.tech -d www.bestbrain.tech
+
+
+INCREASE TIMEOUT
+----------------
+Add or modify inside the location or server block:
+
+
+proxy_read_timeout 600s;
+proxy_connect_timeout 600s;
+proxy_send_timeout 600s;
+
+
+Optional (in http block for global scope):
+send_timeout 600s;
+
+
+WEBSOCKETS
+sudo nano /etc/nginx/sites-available/bestbrain.tech
+location /qf-sim/ {
+    proxy_pass http://127.0.0.1:8001;  # oder dein Daphne/UVicorn-Port
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+!#############
+
+RELOAD (after each pull)
+------
+sudo nginx -t
+sudo systemctl reload nginx
+sudo systemctl restart gunicorn
+sudo systemctl restart fail2ban
+
+###
+
+

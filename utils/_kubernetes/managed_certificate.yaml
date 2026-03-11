@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: clusterexpress-com
+  namespace: default
+spec:
+  domains:
+    - cluster.clusterexpress.com

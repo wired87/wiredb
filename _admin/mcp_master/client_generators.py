@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+import copy
+import json
+import os
+import re
+from pathlib import Path
+from typing import Any, Dict, Iterable, List
+
+
+_PLACEHOLDER_RE = re.compile(r"^\$\{([A-Z0-9_]+)\}$")
+
+
+def load_registry(registry_path: Path) -> Dict[str, Any]:
+    with open(registry_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("Registry root must be a JSON object.")
+    if not isinstance(data.get("services"), list):
+        raise ValueError("Registry must contain a 'services' list.")
+    return data
+
+
+def _resolve_env_placeholder(value: Any, *, resolve_env: bool) -> Any:
+    if not isinstance(value, str):
+        return value
+    m = _PLACEHOLDER_RE.match(value)
+    if not m:
+        return value
+    env_key = m.group(1)
+    if resolve_env and env_key in os.environ:
+        return os.environ[env_key]
+    return value
+
+
+def _resolve_object(value: Any, *, resolve_env: bool) -> Any:
+    if isinstance(value, dict):
+        return {k: _resolve_object(v, resolve_env=resolve_env) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_object(v, resolve_env=resolve_env) for v in value]
+    return _resolve_env_placeholder(value, resolve_env=resolve_env)
+
+
+def normalize_services(registry: Dict[str, Any], *, resolve_env: bool = False) -> List[Dict[str, Any]]:
+    services: List[Dict[str, Any]] = []
+    for raw in registry.get("services", []):
+        if not isinstance(raw, dict):
+            continue
+        service_id = str(raw.get("id") or "").strip()
+        if not service_id:
+            continue
+        service = copy.deepcopy(raw)
+        service["id"] = service_id
+        service = _resolve_object(service, resolve_env=resolve_env)
+        services.append(service)
+    return services
+
+
+def _service_to_mcp_entry(service: Dict[str, Any]) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    if service.get("transport") == "url":
+        url = service.get("url")
+        if url:
+            out["url"] = url
+        headers = service.get("headers")
+        if isinstance(headers, dict) and headers:
+            out["headers"] = headers
+        return out
+
+    if service.get("command"):
+        out["command"] = service["command"]
+    if isinstance(service.get("args"), list):
+        out["args"] = service["args"]
+    if service.get("cwd"):
+        out["cwd"] = service["cwd"]
+    if isinstance(service.get("env"), dict) and service["env"]:
+        out["env"] = service["env"]
+    meta = service.get("meta") if isinstance(service.get("meta"), dict) else {}
+    if "timeout" in meta:
+        out["timeout"] = meta["timeout"]
+    if "trust" in meta:
+        out["trust"] = meta["trust"]
+    if service.get("description"):
+        out["description"] = service["description"]
+    return out
+
+
+def mcp_servers_map(services: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+    return {svc["id"]: _service_to_mcp_entry(svc) for svc in services if svc.get("id")}
+
+
+def render_cursor_mcp_json(services: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+    return {"mcpServers": mcp_servers_map(services)}
+
+
+def render_claude_desktop_config(services: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+    # Claude desktop config shape is also { "mcpServers": { ... } }.
+    return {"mcpServers": mcp_servers_map(services)}
+
+
+def render_gemini_extension(
+    services: Iterable[Dict[str, Any]],
+    *,
+    extension_name: str = "eq-storage-mcp",
+    extension_version: str = "1.0.0",
+    description: str = "MCP extension for eq_storage tools and integrations.",
+    context_file_name: str = "GEMINI.md",
+) -> Dict[str, Any]:
+    return {
+        "name": extension_name,
+        "version": extension_version,
+        "description": description,
+        "contextFileName": context_file_name,
+        "mcpServers": mcp_servers_map(services),
+    }
+
+
+def render_gemini_settings(
+    services: Iterable[Dict[str, Any]],
+    *,
+    schema_url: str = "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+) -> Dict[str, Any]:
+    server_ids = [svc["id"] for svc in services if svc.get("id")]
+    return {
+        "$schema": schema_url,
+        "mcpServers": mcp_servers_map(services),
+        "mcp": {
+            "allowed": server_ids,
+            "excluded": [],
+        },
+        "context": {
+            "fileName": ["GEMINI.md"],
+            "includeDirectories": ["${PROJECT_ROOT}"],
+        },
+    }
+
+
+def render_openai_connector_manifest(registry: Dict[str, Any]) -> Dict[str, Any]:
+    openai_cfg = registry.get("openai") if isinstance(registry.get("openai"), dict) else {}
+    endpoint_env = str(openai_cfg.get("public_endpoint_env") or "OPENAI_MCP_ENDPOINT")
+    endpoint = os.environ.get(endpoint_env, f"${{{endpoint_env}}}")
+    return {
+        "connector_name": openai_cfg.get("connector_name", "eq-storage"),
+        "connector_description": openai_cfg.get(
+            "connector_description",
+            "MCP connector generated by MCPMaster.",
+        ),
+        "connector_url": endpoint,
+        "mcp_path": "/mcp",
+        "notes": [
+            "Use a public HTTPS endpoint for ChatGPT connector setup.",
+            "Set connector_url to your deployed MCP endpoint URL.",
+        ],
+    }
+
+
+def render_gemini_markdown(cases: List[Dict[str, Any]]) -> str:
+    lines = ["# MCPMaster Gemini Context", ""]
+    if not cases:
+        lines.append("No relay cases discovered in this repository.")
+        return "\n".join(lines) + "\n"
+
+    for case in cases:
+        case_name = case.get("case") or "unknown_case"
+        desc = case.get("desc") or "No description."
+        req_struct = case.get("req_struct") if isinstance(case.get("req_struct"), dict) else {}
+        lines.append(f"## {case_name}")
+        lines.append(desc)
+        auth_keys = list((req_struct.get("auth") or {}).keys()) if isinstance(req_struct.get("auth"), dict) else []
+        data_keys = list((req_struct.get("data") or {}).keys()) if isinstance(req_struct.get("data"), dict) else []
+        if auth_keys or data_keys:
+            keys = auth_keys + data_keys
+            lines.append(f"Required keys: {', '.join(keys)}")
+        lines.append("")
+    return "\n".join(lines)

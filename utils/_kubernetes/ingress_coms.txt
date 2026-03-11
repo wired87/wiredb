@@ -1,0 +1,5 @@
+# RAW
+kubectl logs -n ingress-nginx
+
+
+kubectl get endpoints ingress-nginx-controller-admission -n ingress-nginx

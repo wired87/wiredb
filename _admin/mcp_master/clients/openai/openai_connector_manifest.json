@@ -1,0 +1,10 @@
+{
+  "connector_name": "eq-storage",
+  "connector_description": "MCP connector for eq_storage graph and equation tooling.",
+  "connector_url": "${OPENAI_MCP_ENDPOINT}",
+  "mcp_path": "/mcp",
+  "notes": [
+    "Use a public HTTPS endpoint for ChatGPT connector setup.",
+    "Set connector_url to your deployed MCP endpoint URL."
+  ]
+}

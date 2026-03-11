@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "description": "Canonical MCP service registry for multi-client config generation.",
+  "services": [
+    {
+      "id": "eq-storage",
+      "description": "Primary eq_storage MCP server (streamable HTTP).",
+      "transport": "command",
+      "command": "py",
+      "args": [
+        "-m",
+        "_admin.mcp_master.mcp_server"
+      ],
+      "cwd": "${PROJECT_ROOT}",
+      "env": {
+        "MCP_HOST": "${MCP_HOST}",
+        "MCP_PORT": "${MCP_PORT}",
+        "MCP_PATH": "${MCP_PATH}"
+      },
+      "meta": {
+        "timeout": 60000,
+        "trust": false
+      }
+    },
+    {
+      "id": "github",
+      "description": "Official GitHub MCP server via Docker image.",
+      "transport": "command",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/modelcontextprotocol/servers/github:latest"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "meta": {
+        "timeout": 60000,
+        "trust": false
+      }
+    }
+  ],
+  "openai": {
+    "connector_name": "eq-storage",
+    "connector_description": "MCP connector for eq_storage graph and equation tooling.",
+    "public_endpoint_env": "OPENAI_MCP_ENDPOINT"
+  }
+}

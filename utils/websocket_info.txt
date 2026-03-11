@@ -1,0 +1,61 @@
+"""
+# your_app/routing.py
+
+from django.urls import path
+# Importieren Sie Ihren Consumer
+from .consumers import Relay
+
+# WebSocket-URL-Muster für Ihre App
+# Verwenden Sie path() oder re_path() von channels.routing
+websocket_urlpatterns = [
+    # Der Pfad, über den der WebSocket erreichbar sein wird
+    # '<str:room_name>/' ist ein Beispiel für einen dynamischen Pfadparameter
+    path('ws/simulation/', Relay.as_asgi()),
+    # Oder mit dynamischem Parameter, falls benötigt:
+    # path('ws/simulation/<str:simulation_id>/', Relay.as_asgi()),
+]
+
+# Beachten Sie, dass Sie hier .as_asgi() verwenden, NICHT .as_view()
+Erklärung:
+
+Wir importieren path (oder re_path) diesmal von channels.routing, nicht von django.urls.
+Wir definieren eine Liste namens websocket_urlpatterns, ähnlich wie urlpatterns in urls.py.
+Wir verwenden Relay.as_asgi(), um eine ASGI-Anwendung aus Ihrem Consumer zu erhalten, die vom Channels-Routing behandelt werden kann. .as_asgi() ist das Äquivalent zu .as_view() für ASGI Consumer.
+Der Pfad 'ws/simulation/' ist das URL-Segment, über das Clients eine WebSocket-Verbindung herstellen werden (z. B. ws://your-domain/ws/simulation/).
+Schritt 3: Binden Sie die WebSocket-Routen in Ihr Haupt-ASGI-Konfiguration ein
+
+Sie müssen Channels mitteilen, welche Routen für eingehende WebSocket-Verbindungen gelten. Dies geschieht normalerweise in der asgi.py-Datei Ihres Django-Projekts (dort, wo auch wsgi.py und settings.py liegen).
+
+Python
+
+# your_project/asgi.py
+
+import os
+
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+from django.core.asgi import get_asgi_application
+
+# Importieren Sie die WebSocket-Routen Ihrer App
+# Ersetzen Sie 'your_app' durch den tatsächlichen Namen Ihrer Django-App
+from your_app import routing
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'your_project.settings')
+
+# Holen Sie die Standard-ASGI-Anwendung für HTTP
+application = get_asgi_application()
+
+# Definieren Sie das Root-Routing für verschiedene Protokolltypen
+application = ProtocolTypeRouter({
+    "http": application, # Standard-HTTP-Handler (für Django Views, DRF etc.)
+    "websocket": AuthMiddlewareStack( # Wenden Sie optional AuthMiddlewareStack an
+        URLRouter(
+            # Binden Sie Ihre App-spezifischen WebSocket-Routen hier ein
+            routing.websocket_urlpatterns
+        )
+    ),
+})
+
+
+
+"""

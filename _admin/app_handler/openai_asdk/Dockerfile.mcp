@@ -1,0 +1,41 @@
+# BestBrain MCP App - Docker image for OpenAI Apps SDK
+# Ref: https://developers.openai.com/apps-sdk/deploy
+#
+# Build: docker build -t bestbrain-mcp-app -f app_handler/openai_asdk/Dockerfile.mcp .
+# Run:   docker run -p 8787:8787 -e PORT=8787 bestbrain-mcp-app
+
+# --- Builder stage ---
+FROM python:3.10-slim AS builder
+WORKDIR /usr/src/app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project requirements (qbrain has r.txt; MCP server only requires fastapi/uvicorn)
+COPY qbrain/r.txt ./r.txt
+RUN pip install --no-cache-dir --user \
+    fastapi \
+    uvicorn \
+    && pip install --no-cache-dir -r r.txt || true
+
+# --- Runner stage ---
+FROM python:3.10-slim AS runner
+WORKDIR /usr/src/app
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
+# Copy project (context is repo root)
+COPY . .
+
+# MCP server port (Apps SDK quickstart default: 8787)
+ENV PYTHONPATH=/usr/src/app \
+    PYTHONUNBUFFERED=1 \
+    PORT=8787
+
+EXPOSE 8787
+
+# Run MCP server (module path from repo root: _admin.app_handler.openai_asdk)
+CMD ["python", "-m", "_admin.app_handler.openai_asdk.mcp_server", "--port", "8787", "--host", "0.0.0.0"]

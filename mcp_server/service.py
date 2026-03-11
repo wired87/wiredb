@@ -1,0 +1,234 @@
+from __future__ import annotations
+
+import importlib.util
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+import networkx as nx
+
+from _db.manager import DBManager
+from graph.local_graph_utils import GUtils
+from mcp_server.types import (
+    DeleteRequest,
+    DeleteResponse,
+    EntryResponse,
+    GraphEdgeOut,
+    GraphNodeOut,
+    GraphResponse,
+    UpsertRequest,
+    UpsertResponse,
+)
+
+from utils.id_gen import generate_id
+
+
+class MCPServerService:
+    def __init__(self) -> None:
+        self.db = DBManager()
+        self._eq_extractor_cls = None
+        self.g=GUtils(G=nx.MultiGraph())
+
+    @staticmethod
+    def _now() -> datetime:
+        return datetime.utcnow()
+
+    @staticmethod
+    def _as_text(payload_bytes: bytes) -> str:
+        try:
+            return payload_bytes.decode("utf-8")
+        except Exception:
+            return payload_bytes.decode("latin-1", errors="ignore")
+
+    @staticmethod
+    def _extract_text_from_pdf_bytes(payload_bytes: bytes) -> str:
+        """
+        Lightweight PDF text extraction focused on text drawing operators.
+        Falls back to decoded bytes if no text tokens are found.
+        """
+        raw = MCPServerService._as_text(payload_bytes)
+
+        # Capture text blocks inside BT ... ET and extract (...) Tj / [...] TJ payloads.
+        chunks: List[str] = []
+        for block in re.findall(r"BT(.*?)ET", raw, flags=re.DOTALL):
+            chunks.extend(re.findall(r"\((.*?)\)\s*Tj", block, flags=re.DOTALL))
+            for arr in re.findall(r"\[(.*?)\]\s*TJ", block, flags=re.DOTALL):
+                chunks.extend(re.findall(r"\((.*?)\)", arr, flags=re.DOTALL))
+
+        if not chunks:
+            return raw
+
+        cleaned = []
+        for c in chunks:
+            txt = c.replace(r"\(", "(").replace(r"\)", ")").replace(r"\\", "\\")
+            txt = " ".join(txt.split())
+            if txt:
+                cleaned.append(txt)
+        return "\n".join(cleaned) if cleaned else raw
+
+
+    def _load_eq_extractor_class(self):
+        if self._eq_extractor_cls is not None:
+            return self._eq_extractor_cls
+        try:
+            eq_path = Path(__file__).resolve().parents[1] / "math" / "eq_extractor.py"
+            spec = importlib.util.spec_from_file_location("eq_storage_math_eq_extractor", str(eq_path))
+            if spec and spec.loader:
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                self._eq_extractor_cls = getattr(mod, "EqExtractor", None)
+        except Exception:
+            self._eq_extractor_cls = None
+        return self._eq_extractor_cls
+
+    def _extract_content_parts(self, text: str, file_name, user_id):
+        """
+        Use EqExtractor.process_equation(text) as primary extraction engine.
+        Returns per-equation components: equation, params, operators, batches.
+        """
+        EqExtractorCls = self._load_eq_extractor_class()
+        if EqExtractorCls is None:
+            return []
+
+        try:
+            extractor = EqExtractorCls(debug=False)
+            extractor.text_to_multigraph(
+                text=text,
+                context_id=file_name,
+                module_id=file_name,
+                user_id=user_id,
+                g=self.g,
+            )
+        except Exception as e:
+            print("Err", e)
+
+
+    def get_graph(self, user_id: str, test: bool = False) -> GraphResponse:
+        print("[MCPServerService.get_graph] START")
+        print(f"[MCPServerService.get_graph] LOGIC_GATE user_id={user_id} test={test}")
+        if not user_id:
+            return GraphResponse(status="error", user_id="", stats={"message": "user_id is required"})
+
+        try:
+            from graph.qa.visual_g import VisualizeGraph
+
+            visualizer = VisualizeGraph(db=self.db)
+            result = visualizer.run(user_id=user_id, test=test)
+
+            nodes = [
+                GraphNodeOut(id=str(n.get("id") or ""), attrs=dict(n.get("attrs") or {}))
+                for n in (result.get("nodes") or [])
+            ]
+            edges = [
+                GraphEdgeOut(
+                    source=str(e.get("src") or ""),
+                    target=str(e.get("trgt") or ""),
+                    attrs=dict(e.get("attrs") or {}),
+                )
+                for e in (result.get("edges") or [])
+            ]
+
+            stats = dict(result.get("stats") or {})
+            stats["artifacts"] = result.get("artifacts") or {}
+            print("[MCPServerService.get_graph] END ok")
+            return GraphResponse(
+                status="ok",
+                user_id=user_id,
+                nodes=nodes,
+                edges=edges,
+                stats=stats,
+            )
+        except Exception as exc:
+            print(f"[MCPServerService.get_graph] END error={exc}")
+            return GraphResponse(
+                status="error",
+                user_id=user_id,
+                stats={"message": str(exc)},
+            )
+
+    def upsert(self, request: UpsertRequest):
+        """
+        Process text and files equation -> build G -> upsert DB
+        """
+        user_id =request.user_id
+        if not request.user_id:
+            return UpsertResponse(status="error", message="user_id is required")
+
+        normalized = [
+            (f"file_{user_id}_{generate_id(20)}", file.encode("utf-8", errors="ignore"))
+            for file in request.data.files
+        ]
+
+        file_ids: List[str] = []
+        file_rows: List[Dict[str, Any]] = []
+        method_rows: List[Dict[str, Any]] = []
+        param_rows: List[Dict[str, Any]] = []
+        operator_rows: List[Dict[str, Any]] = []
+
+        for file_id, file_bytes in normalized:
+            file_text = (
+                self._extract_text_from_pdf_bytes(file_bytes)
+                if file_bytes.startswith(b"%PDF")
+                else self._as_text(file_bytes)
+            )
+            self._extract_content_parts(file_text, file_id, user_id)
+
+            file_ids.append(file_id)
+            file_rows.append(
+                {
+                    "id": file_id,
+                    "user_id": request.user_id,
+                    "content": file_bytes,
+                    "created_at": self._now(),
+                }
+            )
+
+        if request.data.equation:
+            self._extract_content_parts(request.data.equation, f"{user_id}_{generate_id(20)}", user_id)
+
+        for k, v in self.g.G.nodes(data=True):
+            if v["type"] == "METHOD":
+                v["param_neighbors"] = self.g.get_neighbor_list(node=k, target_type="PARAM", just_ids=True)
+                v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
+                method_rows.append({"id":k,**v})
+
+            elif v["type"] == "PARAM":
+                v["method_neighbors"] = self.g.get_neighbor_list(node=k, target_type="METHOD", just_ids=True)
+                v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
+                param_rows.append({"id":k,**v})
+
+            elif v["type"] == "OPERATOR":
+                v["method_neighbors"] = self.g.get_neighbor_list(node=k, target_type="METHOD", just_ids=True)
+                v["operator_neighbors"] = self.g.get_neighbor_list(node=k, target_type="OPERATOR", just_ids=True)
+                operator_rows.append({"id":k,**v})
+
+
+        # EDGES
+        edge_rows = []
+        for src, trgt, attrs in self.g.G.edges(data=True):
+            edge_rows.append({"src":src,"trgt":trgt,"attrs":attrs})
+
+        self.db.insert("edges", edge_rows)
+        self.db.insert("methods", method_rows)
+        self.db.insert("params", param_rows)
+        self.db.insert("operators", operator_rows)
+        self.db.insert("files", file_rows)
+
+    def get_entry(self, entry_id: str, table: str = "methods", user_id: Optional[str] = None) -> EntryResponse:
+        try:
+            row = self.db.row_from_id(entry_id, table=table, user_id=user_id)
+        except ValueError as exc:
+            return EntryResponse(status="error", table=table, message=str(exc))
+        if not row:
+            return EntryResponse(status="not_found", table=table, message="Entry not found")
+        return EntryResponse(status="ok", entry=row, table=table)
+
+
+    def delete_entries(self, request: DeleteRequest) -> DeleteResponse:
+        if not request.user_id:
+            return DeleteResponse(status="error", message="user_id is required")
+        if request.entry_id:
+            deleted = self.db.del_entry(nid=request.entry_id, table=request.table, user_id=request.user_id, )
+            return DeleteResponse(status="ok", deleted_count=deleted, mode="single")
+        self.db.delete(table=request.table, where_clause=f"WHERE user_id = ?", params={"user_id": request.user_id})
+        return DeleteResponse(status="ok", deleted_count=-1, mode="all")

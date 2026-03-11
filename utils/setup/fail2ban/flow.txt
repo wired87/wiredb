@@ -1,0 +1,78 @@
+✅ 1. Installation
+bash
+Kopieren
+Bearbeiten
+sudo apt update
+sudo apt install fail2ban -y
+🛠️ 2. Konfigurationsdatei anlegen
+bash
+Kopieren
+Bearbeiten
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+Bearbeite die Datei:
+
+bash
+Kopieren
+Bearbeiten
+sudo nano /etc/fail2ban/jail.local
+🔒 3. Basis-Schutz aktivieren
+Aktiviere Logging-Schutz für Nginx & SSH:
+
+ini
+Kopieren
+Bearbeiten
+[sshd]
+enabled = true
+
+[nginx-http-auth]
+enabled = true
+
+[nginx-botsearch]
+enabled = true
+
+[nginx-404]
+enabled = true
+filter = nginx-404
+logpath = /var/log/nginx/access.log
+maxretry = 5
+findtime = 600
+bantime = 3600
+📂 4. Filter für 404-Scanning anlegen
+Erstelle Datei:
+
+bash
+Kopieren
+Bearbeiten
+sudo nano /etc/fail2ban/filter.d/nginx-404.conf
+Inhalt:
+
+ini
+Kopieren
+Bearbeiten
+[Definition]
+failregex = ^<HOST> -.*"(GET|POST).*(HTTP).*" 404
+🚀 5. Start & Autostart aktivieren
+bash
+Kopieren
+Bearbeiten
+sudo systemctl enable fail2ban
+sudo systemctl restart fail2ban
+🔍 6. Status & Logs prüfen
+bash
+Kopieren
+Bearbeiten
+sudo fail2ban-client status
+sudo fail2ban-client status nginx-404
+🧼 Optional: IP manuell entbannen
+bash
+Kopieren
+Bearbeiten
+sudo fail2ban-client unban <IP>
+✅ Ergebnis
+Automatischer Schutz gegen Scanner & Bot-Netze
+
+IPs mit verdächtigem Verhalten werden gebannt
+
+Normale Nutzer über Views sind nicht betroffen
+
+Fertig. Du bist jetzt deutlich besser abgesichert.

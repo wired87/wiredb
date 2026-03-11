@@ -1,0 +1,104 @@
+contextual_phase:
+  description: "Zeitpunkt, Zustand oder Aktivitätsphase im System (z. B. Ruhezustand, Anregung)"
+  reason: "Kopplungen finden oft nur in bestimmten Phasen oder Zuständen statt (z. B. nur bei Aktivierung)"
+
+field_alignment:
+  description: "Orientierung oder Richtung zweier Felder im Raum oder System"
+  reason: "Bestimmt z. B. konstruktive oder destruktive Interferenz (Ausrichtung = +, Gegenrichtung = -)"
+
+symmetry_relation:
+  description: "Symmetriebeziehung zwischen den Objekten (z. B. Spiegelung, Invarianz)"
+  reason: "Symmetrien entscheiden oft über Kopplungstyp oder erlaubte Operatoren (z. B. CPT-Erhaltung)"
+
+value:
+  description: "Numerische Größe oder Zustand des Objekts"
+  reason: "Dient zur Berechnung relativer Differenz oder Skalenverhältnisse"
+
+sign:
+  description: "Vorzeichen oder Richtung (z. B. positiv/negativ)"
+  reason: "Entscheidet über additive vs. subtraktive Kopplung"
+
+unit:
+  description: "Physikalische Einheit (z. B. GeV, m, s)"
+  reason: "Prüft Kompatibilität und mögliche physikalische Wirkung (Multiplikation nur bei kombinierbaren Einheiten)"
+
+dimension:
+  description: "Tensorielle Struktur oder Form (Skalar, Vektor, Spinor, Matrix)"
+  reason: "Legt fest, ob Operation strukturell möglich ist"
+
+origin:
+  description: "Entstehungskontext (z. B. gemessen, simuliert, konstant)"
+  reason: "Beeinflusst Priorität und Gewicht in der Operatorwahl"
+
+interaction_role:
+  description: "Rolle im System (z. B. Quelle, Empfänger, Koppler)"
+  reason: "Bestimmt Richtung der Wechselwirkung und wer beeinflusst wen"
+
+similarity_score:
+  description: "Ähnlichkeit zwischen A und B (0 = verschieden, 1 = gleich)"
+  reason: "Steuert zwischen Addition (hoch) und Division (niedrig)"
+
+energy_potential:
+  description: "Feldinterne Energie oder Fähigkeit zur Kopplung"
+  reason: "Nur energetisch aktive Objekte koppeln sinnvoll"
+
+structural_compatibility:
+  description: "Stimmen interne Freiheitsgrade überein (Spin, Parität, Helizität, Flavour)?"
+  example: "Spin-0 koppelt nicht direkt an Spin-½ ohne Transformation"
+  effect: "Legt fest, ob * überhaupt erlaubt ist"
+
+symmetry_dynamics:
+  description: "Welche Symmetriegruppen wirken lokal/global (z. B. SU(2), U(1), CPT)?"
+  example: "Wenn CPT verletzt → - Operator dominant"
+  effect: "Filtert gültige Operatoren"
+
+local_energy_density:
+  description: "Wie stark ist das Energiegefälle zwischen A und B?"
+  example: "Starker Gradient → * oder /; schwacher Gradient → +"
+  effect: "Leitet Richtung und Stärke des Operators ab"
+
+topological_relation:
+  description: "Gibt es Knoten, Kanten, Windungszahlen, oder geschlossene Schleifen?"
+  example: "Nontriviale Topologie → emergente Operatoren wie ∧, ∇"
+  effect: "Bestimmt ob Verbindung überhaupt darstellbar ist"
+
+historical_phase_coupling:
+  description: "Gab es bereits Interaktion in der Vergangenheit?"
+  example: "Vorheriger Austausch → höherer Kopplungsgrad"
+  effect: "Erhöht Wahrscheinlichkeit für Wiederverbindung"
+
+boundary_condition_alignment:
+  description: "Passen die Randbedingungen (zeitlich, räumlich)?"
+  example: "Phasenübergang erlaubt Multiplikation, nicht Addition"
+  effect: "Aktiviert/deaktiviert bestimmte Operatoren"
+
+dimensional_transition:
+  description: "Verändert sich beim Übergang die Dimension des Feldes?"
+  example: "Matrix * Vektor = Vektor erlaubt; Skalar + Spinor nicht"
+  effect: "Bestimmt Gültigkeit der Operation"
+
+causal_permissibility:
+  description: "Ist die Interaktion kausal erlaubt (Zeitordnung, Lichtkegel)?"
+  example: "Rückwärtige Kopplung oder instantane Überlagerung → verboten"
+  effect: "Filtert zeitlich unphysikalische Operatoren aus"
+
+functional_equivalence:
+  description: "Erzeugt der Operator dieselbe Wirkung wie ein bestehender Pfad?"
+  example: "Redundante Kopplung → weggelassen"
+  effect: "Optimiert Graph"
+
+action_cost:
+  description: "Was kostet diese Verbindung in der Wirkung (∫L dt)?"
+  example: "Lagrange-Wirkung niedrig → bevorzugt"
+  effect: "Bevorzugt Pfade mit minimaler Wirkung (Feynman-Pfad)"
+
+informational_gradient:
+  description: "Wie viel neue Information fließt von A nach B?"
+  example: "Kein neuer Zustand → +; neue Richtung → ×"
+  effect: "Entscheidet, ob überhaupt geknüpft wird"
+
+frequency_resonance:
+  description: "Schwingen beide in kompatiblen Frequenzräumen?"
+  example: "Resonanz → Verstärkung = +; Disharmonie → - oder ∅"
+  effect: "Wählt Verstärkungs- vs. Auslöschungsoperator"
+

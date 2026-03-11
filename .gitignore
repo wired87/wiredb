@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+output/
+# Virtual envs
+.venv/
+venv/
+env/
+.env
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+
+# Local data
+tmp_test_artifacts/
+*.duckdb
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs/temp
+*.log
+*.tmp
+utils/vm_control.py

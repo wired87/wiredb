@@ -1,0 +1,119 @@
+
+############## NAMESERVER
+At your domain provider (where you bought bestbrain.tech):
+
+Create an A record:
+
+Type: A
+
+Host/Name: @ (or empty depending on provider)
+
+Value: your VM public IP address
+
+TTL: default (e.g., 30min or 1h)
+
+Create another A record (for www):
+
+Type: A
+
+Host/Name: www
+
+Value: your VM public IP address
+
+TTL: default
+
+###########################
+
+check it dns records worked:
+ping bestbrain.tech
+
+
+
+#### Expose the app:
+gunicorn bm.asgi:application --bind 127.0.0.1:8001
+
+#### SET UP PERMANENT EXPOSURE:
+
+1. Create a systemd service file
+sudo nano /etc/systemd/system/gunicorn.service
+-> paste:
+WSGI
+[Unit]
+Description=gunicorn daemon for bestbrain.tech
+After=network.target
+
+[Service]
+Environment=PYTHONUNBUFFERED=1
+User=derbenedikt_sterra
+Group=www-data
+WorkingDirectory=/home/derbenedikt_sterra/BestBrain
+ExecStart=/home/derbenedikt_sterra/workenv/bin/gunicorn bm.asgi:application --bind 127.0.0.1:8001 --capture-output --log-level debug
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+
+
+||
+
+ASGI
+[Unit]
+Description=gunicorn daemon for bestbrain.tech
+After=network.target
+
+[Service]
+Environment=PYTHONUNBUFFERED=1
+User=derbenedikt_sterra
+Group=www-data
+WorkingDirectory=/home/derbenedikt_sterra/BestBrain
+ExecStart=/home/derbenedikt_sterra/workenv/bin/gunicorn -k uvicorn.workers.UvicornWorker bm.asgi:application --bind 127.0.0.1:8001 --capture-output --log-level debug
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+
+2. Reload systemd to register the service
+sudo systemctl daemon-reload
+
+Enable it at boot automatically
+sudo systemctl enable gunicorn
+
+Status
+sudo systemctl status gunicorn
+
+
+>>>FINISHED<<<
+Your app will stay up 24/7
+Will auto-restart if it crashes
+Will auto-run after VM reboot
+
+RELOAD
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl restart gunicorn
+
+DEBUGGOING
+sudo apt update
+sudo apt install -y dnsutils
+dig NS bestbrain.tech +short ->ns.udag.net. ns.udag.de. ns.udag.org.
+(after deleting one entry, wait 5 min -> run again dig A bestbrain.tech +short)
+
+
+
+UPDATE CHANGES AFTER PULL
+sudo systemctl restart gunicorn
+
+
+CHECK LOGS
+sudo journalctl -u gunicorn -f
+
+
+
+

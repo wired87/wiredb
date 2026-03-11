@@ -1,0 +1,14 @@
+
+rm -rf qf_core_base  && \\
+rm -rf qf_sim && \\
+rm -rf fb_core && \\
+git clone https://github.com/wired87/qf_core_base && \\
+git clone https://github.com/wired87/qf_sim && \\
+git clone https://github.com/wired87/fb_core && \\
+sudo nginx -t
+sudo systemctl daemon-reload
+sudo systemctl reload nginx
+sudo systemctl restart gunicorn
+sudo systemctl restart fail2ban
+sudo journalctl -u gunicorn -f
+
